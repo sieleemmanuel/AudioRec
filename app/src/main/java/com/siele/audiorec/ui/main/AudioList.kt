@@ -2,6 +2,7 @@ package com.siele.audiorec.ui.main
 
 import android.Manifest
 import android.media.MediaPlayer
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,8 +37,6 @@ fun AudioList(
     val scrollState = rememberLazyListState()
     val audiosViewModel:AudioViewModel = hiltViewModel()
     val audioRecordings = audiosViewModel.audios.value.collectAsState(initial = emptyList()).value
-    val isPlaying = remember { mutableStateOf(false) }
-    val isPaused = remember { mutableStateOf(false) }
     val mediaPlayer = remember { mutableStateOf<MediaPlayer?>(null) }
     Scaffold(
         floatingActionButtonPosition = FabPosition.Center,
@@ -56,20 +55,27 @@ fun AudioList(
         }
     ) {
         if (readPerm) {
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                state = scrollState,
-            ) {
-                items(items = audioRecordings) { recording ->
-                    AudioItem(
-                        modifier = modifier,
-                        audioRecording = recording,
-                        isPaused = isPaused,
-                        isPLaying = isPlaying,
-                        mediaPlayer = mediaPlayer
-                    )
+            if (audioRecordings.isEmpty()){
+                Column(modifier = modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center) {
+                    Text(text = "No recordings yet!")
+                }
+            }else{
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    state = scrollState,
+                ) {
+                    items(items = audioRecordings) { recording ->
+                        AudioItem(
+                            modifier = modifier,
+                            audioRecording = recording,
+                            mediaPlayer = mediaPlayer
+                        )
+                    }
                 }
             }
+
         }else{
             SideEffect {
                 permissionState.launchMultiplePermissionRequest()
@@ -82,32 +88,39 @@ fun AudioList(
 fun AudioItem(
     modifier: Modifier,
     audioRecording: AudioRecording,
-    isPLaying:MutableState<Boolean>,
-    isPaused:MutableState<Boolean>,
+    /*isPLaying:MutableState<Boolean>,
+    isPaused:MutableState<Boolean>,*/
     mediaPlayer: MutableState<MediaPlayer?>
 ) {
+
+    val isPlaying = remember { mutableStateOf(false) }
+    val isPaused = remember { mutableStateOf(false) }
+    val currentAudioRecording = remember { mutableStateOf(audioRecording) }
+    val audioViewModel:AudioViewModel = hiltViewModel()
+    val isAudioPLaying = audioViewModel.isPLaying.value[audioRecording.id]?:false
+    Log.d("AudioList", "IsPlaying: $isAudioPLaying")
     Row(modifier = modifier
         .fillMaxWidth()
         .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.SpaceBetween) {
+        horizontalArrangement = Arrangement.SpaceBetween) {
         Text(text = audioRecording.fileName)
         IconButton(onClick = {
             when{
-                isPaused.value ->{
-                    pausePlay(mediaPlayer, isPaused, isPLaying)
+                !isPlaying.value ->{
+                   audioViewModel.playRecording(audioRecording, isPlaying, mediaPlayer)
                 }
                 else -> {
-                    playRecording(audioRecording, isPLaying, isPaused, mediaPlayer)
+                    audioViewModel.pausePlay(mediaPlayer, isPlaying)
                 }
             }
 
         }) {
             Icon(
-                painter = painterResource(id = if (isPLaying.value){
-                    R.drawable.ic_pause_play
-                }else{
+                painter = painterResource(id = if (!isPlaying.value){
                     R.drawable.ic_play
+                }else{
+                    R.drawable.ic_pause_play
                 }),
                 contentDescription = null
             )
@@ -115,36 +128,6 @@ fun AudioItem(
     }
 }
 
-fun pausePlay(
-    mediaPlayer: MutableState<MediaPlayer?>,
-    paused: MutableState<Boolean>,
-    isPLaying: MutableState<Boolean>) {
-    mediaPlayer.value?.pause()
-    paused.value = true
-    isPLaying.value = false
-
-}
-
-fun playRecording(
-    audioRecording: AudioRecording,
-    isPLaying: MutableState<Boolean>,
-    isPaused: MutableState<Boolean>,
-    mediaPlayer: MutableState<MediaPlayer?>
-) {
-   mediaPlayer.value = MediaPlayer()
-    try {
-        mediaPlayer.value?.apply {
-            setDataSource(audioRecording.filePath)
-            prepare()
-            start()
-        }
-        isPLaying.value = true
-        isPaused.value = false
-
-    }catch (e:IOException){
-        e.printStackTrace()
-    }
-}
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Preview(
