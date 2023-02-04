@@ -16,6 +16,7 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,7 +60,6 @@ fun Record(
     val timestamp = stampFormat.format(Calendar.getInstance().time)
     val fileName = "audio$timestamp.mp3"
     val filePath = "${Environment.getExternalStorageDirectory().absolutePath}/$fileName"
-    val file = File(filePath)
     val audioRecorder = remember { mutableStateOf<MediaRecorder?>(null) }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -68,9 +68,9 @@ fun Record(
             .fillMaxHeight(.7f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = modifier.height(20.dp))
-            Text(text = getTimerLabel(audioViewModel.elapsedTime.value), fontSize = 20.sp)
-            Spacer(modifier = modifier.height(20.dp))
+       /*     Spacer(modifier = modifier.height(20.dp))
+            Text(text = audioViewModel.getTimerLabel(audioViewModel.elapsedTime.value), fontSize = 20.sp)
+         */   Spacer(modifier = modifier.height(20.dp))
             Text(text = audioName.value)
         }
         Row(modifier = modifier
@@ -98,15 +98,15 @@ fun Record(
                         audioName.value = fileName
                         when{
                             isPaused.value  -> {
-                                audioRecorder.value?.let { resumeRecording(it, isPaused, isRecording) }
+                                audioRecorder.value?.let { audioViewModel.resumeRecording(it, isPaused, isRecording) }
                                 audioViewModel.audioTimer(false)
                             }
                             isRecording.value  -> {
                                 audioViewModel.audioTimer(true)
-                                audioRecorder.value?.let { pauseRecording(it, isPaused) }
+                                audioRecorder.value?.let { audioViewModel.pauseRecording(it, isPaused, isRecording) }
                             }
                             else  -> {
-                                recordAudio(
+                                audioViewModel.recordAudio(
                                     audioRecorder,
                                     filePath,
                                     isRecording,
@@ -135,112 +135,42 @@ fun Record(
                 )
             }
 
-            IconButton(
-                onClick = {
-                    audioRecorder.value?.let { stopRecording(it, isRecording, endTime) }
-                    val audioRecording = AudioRecording(
-                        fileName = fileName,
-                        filePath = filePath,
-                        duration = getTimerLabel((endTime.value - startTime.value).toInt())
+            if (isRecording.value) {
+                IconButton(
+                    onClick = {
+                        audioRecorder.value?.let {
+                            audioViewModel.stopRecording(
+                                it,
+                                isRecording,
+                                endTime
+                            )
+                        }
+                        val duration = (endTime.value - startTime.value).toInt()
+                        val audioRecording = AudioRecording(
+                            fileName = fileName,
+                            filePath = filePath,
+                            duration = audioViewModel.getTimerLabel(duration)
+                        )
+                        audioViewModel.insertRecordings(audioRecording)
+                        Toast.makeText(context, "Recording saved successfully", Toast.LENGTH_SHORT)
+                            .show()
+                        navController.popBackStack()
+                    },
+                    modifier = modifier
+                        .padding(10.dp)
+                        .clip(shape = CircleShape)
+                        .background(Color.LightGray)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Done,
+                        contentDescription = null
                     )
-                    audioViewModel.insertRecordings(audioRecording)
-                    Toast.makeText(context, "Recording saved successfully", Toast.LENGTH_SHORT)
-                        .show()
-                    navController.popBackStack() },
-                modifier = modifier
-                    .padding(10.dp)
-                    .clip(shape = CircleShape)
-                    .background(Color.LightGray)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_stop),
-                    contentDescription = null
-                )
+                }
             }
         }
     }
 
 }
-
-fun getTimerLabel(value: Int): String {
-    return "${timerPadding(value/60)}:${timerPadding(value % 60)}"
-}
-
-fun timerPadding(value: Int): String {
-    return if (value<10){
-        ("0$value")
-    }else{
-        ""+value
-    }
-}
-
-
-fun pauseRecording(audioRecorder: MediaRecorder, isPaused: MutableState<Boolean>) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        audioRecorder.pause()
-    }
-    isPaused.value = true
-}
-
-fun resumeRecording(
-    audioRecorder: MediaRecorder,
-    isPaused: MutableState<Boolean>,
-    isRecording: MutableState<Boolean>
-) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        audioRecorder.resume()
-    }
-    isPaused.value = false
-    isRecording.value = true
-}
-
-private fun recordAudio(
-    audioRecorder: MutableState<MediaRecorder?>,
-    filePath: String,
-    isRecording: MutableState<Boolean>,
-    isPaused: MutableState<Boolean>,
-    context: Context,
-    startTime: MutableState<Long>
-) {
-    audioRecorder.value = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        MediaRecorder(context)
-    } else {
-        MediaRecorder()
-    }
-
-    try {
-        audioRecorder.value?.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setOutputFile(filePath)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            prepare()
-            start()
-            startTime.value = System.currentTimeMillis()
-            isRecording.value = true
-            isPaused.value = false
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-}
-
-fun stopRecording(
-    audioRecorder: MediaRecorder,
-    isRecording: MutableState<Boolean>,
-    endTime: MutableState<Long>
-) {
-    if (isRecording.value){
-        audioRecorder.stop()
-        endTime.value = System.currentTimeMillis()
-        isRecording.value = false
-        audioRecorder.apply {
-            reset()
-            release()
-        }
-    }
-}
-
 
 
 
