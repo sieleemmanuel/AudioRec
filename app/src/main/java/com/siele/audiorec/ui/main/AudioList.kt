@@ -88,17 +88,14 @@ fun AudioList(
 fun AudioItem(
     modifier: Modifier,
     audioRecording: AudioRecording,
-    /*isPLaying:MutableState<Boolean>,
-    isPaused:MutableState<Boolean>,*/
+
     mediaPlayer: MutableState<MediaPlayer?>
 ) {
 
     val isPlaying = remember { mutableStateOf(false) }
     val isPaused = remember { mutableStateOf(false) }
-    val currentAudioRecording = remember { mutableStateOf(audioRecording) }
+    val isFinished = remember { mutableStateOf(false) }
     val audioViewModel:AudioViewModel = hiltViewModel()
-    val isAudioPLaying = audioViewModel.isPLaying.value[audioRecording.id]?:false
-    Log.d("AudioList", "IsPlaying: $isAudioPLaying")
     Row(modifier = modifier
         .fillMaxWidth()
         .padding(10.dp),
@@ -107,24 +104,44 @@ fun AudioItem(
         Text(text = audioRecording.fileName)
         IconButton(onClick = {
             when{
-                !isPlaying.value ->{
-                   audioViewModel.playRecording(audioRecording, isPlaying, mediaPlayer)
+                !isPlaying.value && !isPaused.value  ->{
+                   audioViewModel.playRecording(audioRecording, isPlaying, isFinished ,mediaPlayer)
+                }
+                isPlaying.value ->{
+                    audioViewModel.pausePlay(mediaPlayer, isPlaying, isPaused)
+                }
+                isPaused.value ->{
+                    audioViewModel.resumePlay(mediaPlayer, isPlaying, isPaused)
+                }
+                isFinished.value ->{
+                    audioViewModel.playRecording(audioRecording, isPlaying, isFinished, mediaPlayer)
                 }
                 else -> {
-                    audioViewModel.pausePlay(mediaPlayer, isPlaying)
+                      audioViewModel.playRecording(audioRecording, isPlaying, isFinished, mediaPlayer)
                 }
             }
 
         }) {
             Icon(
-                painter = painterResource(id = if (!isPlaying.value){
-                    R.drawable.ic_play
-                }else{
-                    R.drawable.ic_pause_play
-                }),
+                painter = painterResource(id = when {
+                    !isPlaying.value && !isPaused.value -> {
+                        R.drawable.ic_play
+                    }
+                    isPaused.value ->{
+                        R.drawable.ic_play
+                    }
+                    isFinished.value ->{
+                        R.drawable.ic_play
+                    }
+                    else -> {
+                        R.drawable.ic_pause_play
+                    }
+                }
+                ),
                 contentDescription = null
             )
         }
+        audioViewModel.playFinished(mediaPlayer, isPlaying, isFinished)
     }
 }
 
