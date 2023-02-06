@@ -4,20 +4,16 @@ import android.content.Context
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.os.Build
+import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.siele.audiorec.data.database.AudioRecordingsDao
 import com.siele.audiorec.data.model.AudioRecording
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
@@ -138,20 +134,24 @@ class AudioViewModel @Inject constructor(private val audioRecordingsDao: AudioRe
         mediaPlayer: MutableState<MediaPlayer?>,
         isPlaying: MutableState<Boolean>,
         isPaused: MutableState<Boolean>,
+        isFinished: MutableState<Boolean>,
     ) {
             mediaPlayer.value!!.pause()
             isPlaying.value = false
             isPaused.value = true
+        isFinished.value = false
 
     }
     fun resumePlay(
         mediaPlayer: MutableState<MediaPlayer?>,
         isPlaying: MutableState<Boolean>,
         isPaused: MutableState<Boolean>,
+        isFinished: MutableState<Boolean>,
     ) {
         mediaPlayer.value!!.start()
         isPlaying.value = true
         isPaused.value = false
+        isFinished.value = false
 
     }
 
@@ -175,6 +175,7 @@ class AudioViewModel @Inject constructor(private val audioRecordingsDao: AudioRe
         mediaPlayer: MutableState<MediaPlayer?>
     ) {
         mediaPlayer.value = MediaPlayer()
+        mediaPlayer.value?.stop()
         try {
             mediaPlayer.value?.apply {
                 reset()

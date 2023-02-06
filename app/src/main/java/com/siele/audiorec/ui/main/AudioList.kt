@@ -24,7 +24,6 @@ import com.siele.audiorec.R
 import com.siele.audiorec.data.model.AudioRecording
 import com.siele.audiorec.ui.theme.AudioRecTheme
 import com.siele.audiorec.util.Screen
-import java.io.IOException
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -102,16 +101,17 @@ fun AudioItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween) {
         Text(text = audioRecording.fileName)
+        audioViewModel.playFinished(mediaPlayer, isPlaying, isFinished)
         IconButton(onClick = {
             when{
                 !isPlaying.value && !isPaused.value  ->{
                    audioViewModel.playRecording(audioRecording, isPlaying, isFinished ,mediaPlayer)
                 }
                 isPlaying.value ->{
-                    audioViewModel.pausePlay(mediaPlayer, isPlaying, isPaused)
+                    audioViewModel.pausePlay(mediaPlayer, isPlaying, isPaused, isFinished)
                 }
                 isPaused.value ->{
-                    audioViewModel.resumePlay(mediaPlayer, isPlaying, isPaused)
+                    audioViewModel.resumePlay(mediaPlayer, isPlaying, isPaused, isFinished)
                 }
                 isFinished.value ->{
                     audioViewModel.playRecording(audioRecording, isPlaying, isFinished, mediaPlayer)
@@ -127,21 +127,26 @@ fun AudioItem(
                     !isPlaying.value && !isPaused.value -> {
                         R.drawable.ic_play
                     }
+                    isPlaying.value && !isPaused.value && !isFinished.value->{
+                        R.drawable.ic_pause_play
+                    }
+                    !isPaused.value && isFinished.value->{
+                        R.drawable.ic_play
+                    }
                     isPaused.value ->{
                         R.drawable.ic_play
                     }
-                    isFinished.value ->{
+                    isFinished.value && !isPlaying.value && !isPaused.value->{
                         R.drawable.ic_play
                     }
                     else -> {
-                        R.drawable.ic_pause_play
+                        R.drawable.ic_play
                     }
                 }
                 ),
                 contentDescription = null
             )
         }
-        audioViewModel.playFinished(mediaPlayer, isPlaying, isFinished)
     }
 }
 
