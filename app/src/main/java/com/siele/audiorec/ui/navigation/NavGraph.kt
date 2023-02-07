@@ -29,7 +29,6 @@ fun NavGraph(
             Record(
                 navController = navController,
                 recordPerm = recordGranted,
-                writePerm = writeGranted,
                 permissionState = permissionState
             )
         }
