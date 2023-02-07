@@ -14,6 +14,7 @@ import com.siele.audiorec.data.model.AudioRecording
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.io.IOException
 import javax.inject.Inject
@@ -29,6 +30,10 @@ class AudioViewModel @Inject constructor(private val audioRecordingsDao: AudioRe
         viewModelScope.launch {
             audioRecordingsDao.insertRecordings(audioRecording)
         }
+    }
+
+    fun getRecordings() {
+        audios.value = audioRecordingsDao.getAudioRecording()
     }
 
     fun audioTimer(recording:Boolean) {
@@ -56,7 +61,6 @@ class AudioViewModel @Inject constructor(private val audioRecordingsDao: AudioRe
             ""+value
         }
     }
-
 
     fun pauseRecording(
         audioRecorder: MediaRecorder,
@@ -131,38 +135,44 @@ class AudioViewModel @Inject constructor(private val audioRecordingsDao: AudioRe
 
 
     fun pausePlay(
+        audioRecording: AudioRecording,
         mediaPlayer: MutableState<MediaPlayer?>,
-        isPlaying: MutableState<Boolean>,
-        isPaused: MutableState<Boolean>,
-        isFinished: MutableState<Boolean>,
+        isPaused: MutableState<Boolean>
     ) {
-            mediaPlayer.value!!.pause()
-            isPlaying.value = false
-            isPaused.value = true
-        isFinished.value = false
+        mediaPlayer.value?.pause()
+        isPaused.value = true
+        audioRecording.isPlaying = false
+        audioRecording.isFinished = false
 
     }
     fun resumePlay(
+        audioRecording: AudioRecording,
         mediaPlayer: MutableState<MediaPlayer?>,
-        isPlaying: MutableState<Boolean>,
         isPaused: MutableState<Boolean>,
-        isFinished: MutableState<Boolean>,
     ) {
-        mediaPlayer.value!!.start()
-        isPlaying.value = true
+        mediaPlayer.value?.start()
         isPaused.value = false
-        isFinished.value = false
+        audioRecording.isPlaying = true
+        audioRecording.isFinished = false
 
     }
 
     fun playFinished(
+        audioRecording: AudioRecording,
+        recordings:List<AudioRecording>,
         mediaPlayer: MutableState<MediaPlayer?>,
-        isPlaying: MutableState<Boolean>,
-        isFinished: MutableState<Boolean>
     ) {
         mediaPlayer.value?.setOnCompletionListener {
-            isFinished.value = true
-            isPlaying.value = false
+            audioRecording.isFinished = true
+            audioRecording.isPlaying = false
+            recordings.forEach {
+                it.isPlaying = false
+                it.isFinished = it==audioRecording
+            }
+            audios.value = flowOf(recordings)
+            mediaPlayer.value?.stop()
+            mediaPlayer.value?.release()
+            mediaPlayer.value = null
         }
 
 
@@ -170,12 +180,11 @@ class AudioViewModel @Inject constructor(private val audioRecordingsDao: AudioRe
 
     fun playRecording(
         audioRecording: AudioRecording,
-        isPlaying: MutableState<Boolean>,
-        isFinished: MutableState<Boolean>,
+        audioRecordings:List<AudioRecording>,
         mediaPlayer: MutableState<MediaPlayer?>
     ) {
-        mediaPlayer.value = MediaPlayer()
         mediaPlayer.value?.stop()
+        mediaPlayer.value = MediaPlayer()
         try {
             mediaPlayer.value?.apply {
                 reset()
@@ -183,13 +192,18 @@ class AudioViewModel @Inject constructor(private val audioRecordingsDao: AudioRe
                 prepare()
                 start()
             }
-            isPlaying.value = true
-            isFinished.value = false
+            audioRecording.isPlaying = true
+            audioRecording.isFinished = false
 
+            audioRecordings.forEach {
+                it.isPlaying = it==audioRecording
+            }
+            audios.value = flowOf(audioRecordings)
         }catch (e: IOException){
             e.printStackTrace()
         }
     }
+
 
 
 }

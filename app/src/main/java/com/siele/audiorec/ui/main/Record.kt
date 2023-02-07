@@ -11,6 +11,8 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Button
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.Text
@@ -46,7 +48,6 @@ fun Record(
     modifier: Modifier = Modifier,
     navController: NavHostController,
     recordPerm: Boolean,
-    writePerm: Boolean,
     permissionState: MultiplePermissionsState
 ) {
     val audioViewModel:AudioViewModel = hiltViewModel()
@@ -79,20 +80,22 @@ fun Record(
             horizontalArrangement = Arrangement.SpaceAround
         ) {
 
-            IconButton(
-            onClick = { navController.popBackStack() },
-            modifier = modifier
-                .padding(10.dp)
-                .clip(shape = CircleShape)
-                .background(Color.LightGray)
+            Button(
+            onClick = {
+                audioRecorder.value?.release()
+                audioRecorder.value = null
+                navController.popBackStack()
+                      },
+            shape = RoundedCornerShape(20.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = null
             )
+                Text(text = "Cancel")
         }
 
-            IconButton(
+            Button(
                 onClick = {
                     if (recordPerm) {
                         audioName.value = fileName
@@ -120,10 +123,7 @@ fun Record(
                         permissionState.launchMultiplePermissionRequest()
                     }
                 },
-                modifier = modifier
-                    .padding(10.dp)
-                    .clip(shape = CircleShape)
-                    .background(Color.LightGray)
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Icon(
                     painter = painterResource(id = if (isRecording.value) {
@@ -133,10 +133,11 @@ fun Record(
                     }),
                     contentDescription = null
                 )
+                Text(text = if (isRecording.value) "Pause" else "Record")
             }
 
             if (isRecording.value) {
-                IconButton(
+                Button(
                     onClick = {
                         audioRecorder.value?.let {
                             audioViewModel.stopRecording(
@@ -152,19 +153,18 @@ fun Record(
                             duration = audioViewModel.getTimerLabel(duration)
                         )
                         audioViewModel.insertRecordings(audioRecording)
+                        audioViewModel.getRecordings()
                         Toast.makeText(context, "Recording saved successfully", Toast.LENGTH_SHORT)
                             .show()
                         navController.popBackStack()
                     },
-                    modifier = modifier
-                        .padding(10.dp)
-                        .clip(shape = CircleShape)
-                        .background(Color.LightGray)
+                    shape = RoundedCornerShape(20.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Done,
                         contentDescription = null
                     )
+                    Text(text = "Save")
                 }
             }
         }
@@ -185,7 +185,6 @@ fun RecordPreview() {
         Record(
             navController = rememberNavController(),
             recordPerm = true,
-            writePerm = true,
             permissionState =  rememberMultiplePermissionsState(
                 permissions = listOf(
                     Manifest.permission.RECORD_AUDIO,

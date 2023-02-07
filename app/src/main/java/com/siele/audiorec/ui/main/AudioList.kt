@@ -2,7 +2,6 @@ package com.siele.audiorec.ui.main
 
 import android.Manifest
 import android.media.MediaPlayer
-import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,7 +33,7 @@ fun AudioList(
     permissionState: MultiplePermissionsState
 ) {
     val scrollState = rememberLazyListState()
-    val audiosViewModel:AudioViewModel = hiltViewModel()
+    val audiosViewModel: AudioViewModel = hiltViewModel()
     val audioRecordings = audiosViewModel.audios.value.collectAsState(initial = emptyList()).value
     val mediaPlayer = remember { mutableStateOf<MediaPlayer?>(null) }
     Scaffold(
@@ -43,24 +42,30 @@ fun AudioList(
             FloatingActionButton(
                 shape = CircleShape,
                 onClick = {
-                          navController.navigate(route = Screen.Record.route)
+                    navController.navigate(route = Screen.Record.route)
+                    audiosViewModel.getRecordings()
                 },
                 contentColor = Color.White
             ) {
-                Icon(painter = painterResource(
-                    id = R.drawable.ic_mic),
-                    contentDescription = null)
+                Icon(
+                    painter = painterResource(
+                        id = R.drawable.ic_mic
+                    ),
+                    contentDescription = null
+                )
             }
         }
     ) {
         if (readPerm) {
-            if (audioRecordings.isEmpty()){
-                Column(modifier = modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center) {
+            if (audioRecordings.isEmpty()) {
+                Column(
+                    modifier = modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(text = "No recordings yet!")
                 }
-            }else{
+            } else {
                 LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     state = scrollState,
@@ -69,13 +74,14 @@ fun AudioList(
                         AudioItem(
                             modifier = modifier,
                             audioRecording = recording,
+                            audioRecordings = audioRecordings,
                             mediaPlayer = mediaPlayer
                         )
                     }
                 }
             }
 
-        }else{
+        } else {
             SideEffect {
                 permissionState.launchMultiplePermissionRequest()
             }
@@ -87,62 +93,83 @@ fun AudioList(
 fun AudioItem(
     modifier: Modifier,
     audioRecording: AudioRecording,
-
+    audioRecordings: List<AudioRecording>,
     mediaPlayer: MutableState<MediaPlayer?>
 ) {
 
-    val isPlaying = remember { mutableStateOf(false) }
     val isPaused = remember { mutableStateOf(false) }
-    val isFinished = remember { mutableStateOf(false) }
-    val audioViewModel:AudioViewModel = hiltViewModel()
-    Row(modifier = modifier
-        .fillMaxWidth()
-        .padding(10.dp),
+    val audioViewModel: AudioViewModel = hiltViewModel()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween) {
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Text(text = audioRecording.fileName)
-        audioViewModel.playFinished(mediaPlayer, isPlaying, isFinished)
+
+        audioViewModel.playFinished(
+            audioRecording = audioRecording,
+            recordings = audioRecordings,
+            mediaPlayer = mediaPlayer
+        )
+
         IconButton(onClick = {
-            when{
-                !isPlaying.value && !isPaused.value  ->{
-                   audioViewModel.playRecording(audioRecording, isPlaying, isFinished ,mediaPlayer)
+            when {
+                !audioRecording.isPlaying && !isPaused.value -> {
+                    audioViewModel.playRecording(
+                        audioRecording = audioRecording,
+                        audioRecordings = audioRecordings,
+                        mediaPlayer = mediaPlayer
+                    )
                 }
-                isPlaying.value ->{
-                    audioViewModel.pausePlay(mediaPlayer, isPlaying, isPaused, isFinished)
+                audioRecording.isPlaying -> {
+                    audioViewModel.pausePlay(
+                        audioRecording = audioRecording,
+                        mediaPlayer = mediaPlayer,
+                        isPaused = isPaused,
+                    )
                 }
-                isPaused.value ->{
-                    audioViewModel.resumePlay(mediaPlayer, isPlaying, isPaused, isFinished)
+                isPaused.value -> {
+                    audioViewModel.resumePlay(
+                        audioRecording,
+                        mediaPlayer,
+                        isPaused
+                    )
                 }
-                isFinished.value ->{
-                    audioViewModel.playRecording(audioRecording, isPlaying, isFinished, mediaPlayer)
+                audioRecording.isFinished -> {
+                    audioViewModel.playRecording(
+                        audioRecording = audioRecording,
+                        audioRecordings = audioRecordings,
+                        mediaPlayer = mediaPlayer
+                    )
                 }
                 else -> {
-                      audioViewModel.playRecording(audioRecording, isPlaying, isFinished, mediaPlayer)
+                    audioViewModel.playRecording(
+                        audioRecording = audioRecording,
+                        audioRecordings = audioRecordings,
+                        mediaPlayer = mediaPlayer
+                    )
                 }
             }
 
         }) {
             Icon(
-                painter = painterResource(id = when {
-                    !isPlaying.value && !isPaused.value -> {
-                        R.drawable.ic_play
+                painter = painterResource(
+                    id = when {
+                        audioRecording.isPlaying && !isPaused.value-> {
+                            R.drawable.ic_pause_play
+                        }
+                        isPaused.value && audioRecording.isPlaying -> {
+                            R.drawable.ic_play
+                        }
+                        audioRecording.isFinished -> {
+                            R.drawable.ic_play
+                        }
+                        else -> {
+                            R.drawable.ic_play
+                        }
                     }
-                    isPlaying.value && !isPaused.value && !isFinished.value->{
-                        R.drawable.ic_pause_play
-                    }
-                    !isPaused.value && isFinished.value->{
-                        R.drawable.ic_play
-                    }
-                    isPaused.value ->{
-                        R.drawable.ic_play
-                    }
-                    isFinished.value && !isPlaying.value && !isPaused.value->{
-                        R.drawable.ic_play
-                    }
-                    else -> {
-                        R.drawable.ic_play
-                    }
-                }
                 ),
                 contentDescription = null
             )
@@ -167,7 +194,8 @@ fun AudioListPreview() {
                     Manifest.permission.RECORD_AUDIO,
                     Manifest.permission.READ_EXTERNAL_STORAGE,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ))
+                )
+            )
         )
     }
 }
