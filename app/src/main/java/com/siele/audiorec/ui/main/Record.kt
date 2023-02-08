@@ -69,9 +69,7 @@ fun Record(
             .fillMaxHeight(.7f),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-       /*     Spacer(modifier = modifier.height(20.dp))
-            Text(text = audioViewModel.getTimerLabel(audioViewModel.elapsedTime.value), fontSize = 20.sp)
-         */   Spacer(modifier = modifier.height(20.dp))
+         Spacer(modifier = modifier.height(20.dp))
             Text(text = audioName.value)
         }
         Row(modifier = modifier
@@ -79,7 +77,6 @@ fun Record(
             .fillMaxHeight(),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
-
             Button(
             onClick = {
                 audioRecorder.value?.release()
