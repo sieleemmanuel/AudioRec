@@ -60,7 +60,7 @@ fun Record(
     val stampFormat = SimpleDateFormat("yyyyMMddHHmm", Locale.getDefault())
     val timestamp = stampFormat.format(Calendar.getInstance().time)
     val fileName = "audio$timestamp.mp3"
-    val filePath = "${Environment.getExternalStorageDirectory().absolutePath}/$fileName"
+    val filePath = "${context.filesDir.absolutePath}/$fileName"
     val audioRecorder = remember { mutableStateOf<MediaRecorder?>(null) }
 
     Column(modifier = modifier.fillMaxSize()) {
