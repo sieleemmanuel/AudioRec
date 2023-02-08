@@ -44,6 +44,7 @@ fun AudioList(
                 onClick = {
                     navController.navigate(route = Screen.Record.route)
                     audiosViewModel.getRecordings()
+                    mediaPlayer.value?.stop()
                 },
                 contentColor = Color.White
             ) {
